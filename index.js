@@ -10,8 +10,6 @@ const domain = process.argv[2];
 main();
 
 async function main() {
-    const response = await fetch(domain);
-    console.log(response);
     // Retrieve all URLs and remove duplicates from arrays
     let URLs = await getURLs()
     URLs = removeDuplicatesFromAllURLObject(URLs);
@@ -61,7 +59,9 @@ async function getPageURLs(allURLs, pageUrl) {
                 // Determine if link is internal or external
                 if (isUrlInternal(link)) {
                     pageInternalURLs.push(link);
-                    pageUnscrapedInternalURLs.push(link);
+                    if (!localAllURLs.allScrapedInternalURLs.includes(link)) {
+                        pageUnscrapedInternalURLs.push(link);
+                    }
                 } else {
                     pageExternalURLs.push(link);
                 }
@@ -72,22 +72,26 @@ async function getPageURLs(allURLs, pageUrl) {
     }
 
     // Push page URLs to allURLs object
-    localAllURLs.allExternalURLs = localAllURLs.allExternalURLs.concat(pageExternalURLs);
-    localAllURLs.allInternalURLs = localAllURLs.allInternalURLs.concat(pageInternalURLs);
-    localAllURLs.allUnscrapedInternalURLs = localAllURLs.allUnscrapedInternalURLs.concat(pageUnscrapedInternalURLs)
+    localAllURLs.allExternalURLs = removeDuplicatesFromArray(localAllURLs.allExternalURLs.concat(pageExternalURLs));
+    localAllURLs.allInternalURLs = removeDuplicatesFromArray(localAllURLs.allInternalURLs.concat(pageInternalURLs));
+    localAllURLs.allUnscrapedInternalURLs = removeDuplicatesFromArray(localAllURLs.allUnscrapedInternalURLs.concat(pageUnscrapedInternalURLs));
 
-    localAllURLs.allUnscrapedInternalURLs.forEach(url => {
-        // Only scrape new URLs
+    await Promise.all(
+        localAllURLs.allUnscrapedInternalURLs.map(async (url) => {
+            // Only scrape new URLs
+            if(!localAllURLs.allScrapedInternalURLs.includes(url)){
         if(!localAllURLs.allScrapedInternalURLs.includes(url)){ 
-            localAllURLs.allUnscrapedInternalURLs.splice(url);
-            localAllURLs.allScrapedInternalURLs.push(url);
-            try {
-                localAllURLs = getPageURLs(localAllURLs, url)
-            } catch {
-                // Error but still continue
+            if(!localAllURLs.allScrapedInternalURLs.includes(url)){
+                localAllURLs.allUnscrapedInternalURLs = localAllURLs.allUnscrapedInternalURLs.splice(url);
+                localAllURLs.allScrapedInternalURLs.push(url);
+                try {
+                    localAllURLs = await getPageURLs(localAllURLs, url)
+                } catch (error) {
+                    console.log(error)
+                }
             }
-        }
-    })
+        })
+    )
     return localAllURLs
 }
 
@@ -168,8 +172,6 @@ async function getRequestStats(allURLs) {
                 loadTimes.push(stopwatch.read());
                 succesCounter++;
             } catch(error) {
-                console.log(error);
-                console.log("bad")
                 failCounter++;
             }
         })
