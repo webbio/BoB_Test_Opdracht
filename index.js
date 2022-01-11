@@ -2,6 +2,7 @@
 import fetch from 'node-fetch';
 import cheerio from "cheerio";
 import valid_url from "valid-url";
+import Stopwatch from "statman-stopwatch";
 
 // Retrieve domain from node command
 const domain = process.argv[2];
@@ -141,8 +142,8 @@ async function getURLStatistics(allURLs) {
 
     URLStatisticsObject.amountOfSuccesfullURLs = requestsStats.amountOfSuccesfullURLs;
     URLStatisticsObject.amountOfErrorURLs = requestsStats.amountOfErrorURLs;
-    // URLStatisticsObject.averageLoadTime = requestsStats.averageLoadTime;
-    // URLStatisticsObject.averagePayload = requestsStats.averagePayload;
+    URLStatisticsObject.averageLoadTime = requestsStats.averageLoadTime;
+    URLStatisticsObject.averagePayload = requestsStats.averagePayload;
     URLStatisticsObject.percentageSuccesfull = requestsStats.amountOfSuccesfullURLs / (requestsStats.amountOfErrorURLs + requestsStats.amountOfSuccesfullURLs) * 100;
 
     return URLStatisticsObject;
@@ -156,34 +157,41 @@ async function getRequestStats(allURLs) {
 
     let localAllURLs = allURLs.allInternalURLs.concat(allURLs.allExternalURLs);
     
-    for (let i = 0; i < localAllURLs.length; i++) {
-        try {
-            const response = await fetch(localAllURLs[i]);
-            succesCounter++;
-        } catch(error) {
-            failCounter++;
-        }
-    }
-    
-    // localAllURLs.forEach(async(url) => {
-    //     try {
-    //         console.log(url);
-    //         const response = await fetch(url);
-    //         console.log("good")
-    //         succesCounter++;
-    //     } catch(error) {
-    //         console.log("bad")
-    //         failCounter++;
-    //     }
-    // })
+    await Promise.all(
+        localAllURLs.map(async(url) => {
+            try {
+                const stopwatch = new Stopwatch();
+                stopwatch.start();
+                const response = await fetch(url);
+                stopwatch.stop();
+                payLoads.push(getBinarySize(await response.text()));
+                loadTimes.push(stopwatch.read());
+                succesCounter++;
+            } catch(error) {
+                console.log(error);
+                console.log("bad")
+                failCounter++;
+            }
+        })
+    )
 
     // Initialisation of return object
     let statsObject = {
         amountOfSuccesfullURLs: succesCounter,
         amountOfErrorURLs: failCounter,
-        averageLoadTime: "",
-        averagePayload: "",
+        averageLoadTime: Math.round(getAverageFromArray(loadTimes)),
+        averagePayload: Math.round(getAverageFromArray(payLoads))
     };
 
     return statsObject;
+}
+
+function getBinarySize(string) {
+    return Buffer.byteLength(string, "utf8");
+}
+
+function getAverageFromArray(array) {
+    const sum = array.reduce((a, b) => a + b, 0);
+    const avg = (sum / array.length) || 0;
+    return avg;
 }
