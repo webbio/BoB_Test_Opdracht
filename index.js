@@ -80,8 +80,6 @@ async function getPageURLs(allURLs, pageUrl) {
         localAllURLs.allUnscrapedInternalURLs.map(async (url) => {
             // Only scrape new URLs
             if(!localAllURLs.allScrapedInternalURLs.includes(url)){
-        if(!localAllURLs.allScrapedInternalURLs.includes(url)){ 
-            if(!localAllURLs.allScrapedInternalURLs.includes(url)){
                 localAllURLs.allUnscrapedInternalURLs = localAllURLs.allUnscrapedInternalURLs.splice(url);
                 localAllURLs.allScrapedInternalURLs.push(url);
                 try {
