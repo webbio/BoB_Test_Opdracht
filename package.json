@@ -1,0 +1,18 @@
+{
+  "name": "webbio-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "cheerio": "*",
+    "node-fetch": "^3.1.0",
+    "node-html-parser": "1.4.9",
+    "valid-url": "^1.0.9"
+  }
+}
